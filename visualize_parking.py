@@ -69,7 +69,9 @@ legend_elements = [
     Line2D([0], [0], marker='o', color='w', label='Vacant', 
            markerfacecolor='green', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
     Line2D([0], [0], marker='o', color='w', label='Nearest Vacant', 
-           markerfacecolor='orange', markersize=10, markeredgecolor='black', markeredgewidth=0.5)
+           markerfacecolor='orange', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
+    Line2D([0], [0], marker='o', color='w', label='Entering Vehicle', 
+           markerfacecolor='cyan', markersize=10, markeredgecolor='black', markeredgewidth=0.5)
 ]
 legend_obj = ax.legend(handles=legend_elements, loc='upper right', fontsize=12, framealpha=0.9)
 
@@ -160,6 +162,12 @@ def animate_frame(frame_num):
             # If no plate number, use red dot as fallback
             ax.scatter(row['x'], row['plot_y'], c='red', alpha=0.7, s=80, 
                       zorder=1, edgecolors='black', linewidths=0.5)
+    
+    # Plot entering vehicle marker (static at top-left entrance)
+    # Coordinates updated based on user feedback (blue dot, more to the right)
+    entrance_x, entrance_y = 225, 50
+    ax.scatter(entrance_x, entrance_y, c='cyan', alpha=1.0, s=150, 
+              zorder=3, edgecolors='black', linewidths=1.5)
     
     return []
 
