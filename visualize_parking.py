@@ -65,8 +65,12 @@ for spine in ax.spines.values():
 
 # Add legend (same for all frames)
 from matplotlib.lines import Line2D
-legend_elements = [Line2D([0], [0], marker='o', color='w', label='Vacant', 
-                          markerfacecolor='green', markersize=10, markeredgecolor='black', markeredgewidth=0.5)]
+legend_elements = [
+    Line2D([0], [0], marker='o', color='w', label='Vacant', 
+           markerfacecolor='green', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
+    Line2D([0], [0], marker='o', color='w', label='Nearest Vacant', 
+           markerfacecolor='orange', markersize=10, markeredgecolor='black', markeredgewidth=0.5)
+]
 legend_obj = ax.legend(handles=legend_elements, loc='upper right', fontsize=12, framealpha=0.9)
 
 # Store references to dynamic elements that will be updated
@@ -117,11 +121,30 @@ def animate_frame(frame_num):
     occupied_spots = plot_df[plot_df['Status'] == 'occupied'].copy()
     vacant_spots = plot_df[plot_df['Status'] == 'vacant'].copy()
     
-    # Plot vacant spots as green dots
+    # Plot vacant spots
     if not vacant_spots.empty:
-        ax.scatter(vacant_spots['x'], vacant_spots['plot_y'], 
-                  c='green', alpha=0.7, s=80, zorder=1,
-                  edgecolors='black', linewidths=0.5)
+        # Calculate distance from top-left (0, 0) for each vacant spot
+        # Using Euclidean distance: sqrt(x^2 + y^2)
+        # Note: We use plot_y which corresponds to the visual coordinates
+        vacant_spots['distance'] = np.sqrt(vacant_spots['x']**2 + vacant_spots['plot_y']**2)
+        
+        # Find the index of the nearest spot
+        nearest_idx = vacant_spots['distance'].idxmin()
+        
+        # Split into nearest and others
+        nearest_spot = vacant_spots.loc[[nearest_idx]]
+        other_vacant = vacant_spots.drop(nearest_idx)
+        
+        # Plot other vacant spots as green dots
+        if not other_vacant.empty:
+            ax.scatter(other_vacant['x'], other_vacant['plot_y'], 
+                      c='green', alpha=0.7, s=80, zorder=1,
+                      edgecolors='black', linewidths=0.5)
+            
+        # Plot nearest vacant spot as orange dot
+        ax.scatter(nearest_spot['x'], nearest_spot['plot_y'], 
+                  c='orange', alpha=0.9, s=100, zorder=2,
+                  edgecolors='black', linewidths=1.0)
     
     # Plot occupied spots with license plate images
     for idx, row in occupied_spots.iterrows():
