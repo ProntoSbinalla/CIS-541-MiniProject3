@@ -71,7 +71,8 @@ legend_elements = [
     Line2D([0], [0], marker='o', color='w', label='Nearest Vacant', 
            markerfacecolor='orange', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
     Line2D([0], [0], marker='o', color='w', label='Entering Vehicle', 
-           markerfacecolor='cyan', markersize=10, markeredgecolor='black', markeredgewidth=0.5)
+           markerfacecolor='cyan', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
+    Line2D([0], [0], color='yellow', linestyle='-', linewidth=2.5, label='Path to Spot')
 ]
 legend_obj = ax.legend(handles=legend_elements, loc='upper right', fontsize=12, framealpha=0.9)
 
@@ -97,6 +98,10 @@ def animate_frame(frame_num):
     # Title text is in ax.texts, not ax.artists, so safe to clear all artists
     while ax.artists:
         ax.artists[0].remove()
+
+    # Clear lines (paths) from previous frame
+    while ax.lines:
+        ax.lines[0].remove()
     
     # Get current timestamp
     current_timestamp = unique_timestamps[frame_num]
@@ -147,6 +152,14 @@ def animate_frame(frame_num):
         ax.scatter(nearest_spot['x'], nearest_spot['plot_y'], 
                   c='orange', alpha=0.9, s=100, zorder=2,
                   edgecolors='black', linewidths=1.0)
+                  
+        # Draw path from entrance to nearest vacant spot
+        # Entrance coordinates are defined below, but we use the values here
+        ent_x, ent_y = 225, 50
+        path_x = [ent_x, nearest_spot['x'].values[0]]
+        path_y = [ent_y, nearest_spot['plot_y'].values[0]]
+        
+        ax.plot(path_x, path_y, color='yellow', linestyle='-', linewidth=2.5, zorder=1.5, alpha=0.9)
     
     # Plot occupied spots with license plate images
     for idx, row in occupied_spots.iterrows():
