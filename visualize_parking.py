@@ -69,10 +69,10 @@ legend_elements = [
     Line2D([0], [0], marker='o', color='w', label='Vacant', 
            markerfacecolor='green', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
     Line2D([0], [0], marker='o', color='w', label='Nearest Vacant', 
-           markerfacecolor='orange', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
+           markerfacecolor='orange', markersize=15, markeredgecolor='black', markeredgewidth=0.5),
     Line2D([0], [0], marker='o', color='w', label='Entering Vehicle', 
-           markerfacecolor='cyan', markersize=10, markeredgecolor='black', markeredgewidth=0.5),
-    Line2D([0], [0], color='yellow', linestyle='-', linewidth=2.5, label='Path to Spot')
+           markerfacecolor='cyan', markersize=15, markeredgecolor='black', markeredgewidth=0.5),
+    Line2D([0], [0], color='yellow', linestyle='-', linewidth=4.0, label='Path to Spot')
 ]
 legend_obj = ax.legend(handles=legend_elements, loc='upper right', fontsize=12, framealpha=0.9)
 
@@ -148,19 +148,69 @@ def animate_frame(frame_num):
                       c='green', alpha=0.7, s=80, zorder=1,
                       edgecolors='black', linewidths=0.5)
             
-        # Plot nearest vacant spot as orange dot
+        # Plot nearest vacant spot as orange dot (increased size)
         ax.scatter(nearest_spot['x'], nearest_spot['plot_y'], 
-                  c='orange', alpha=0.9, s=100, zorder=2,
-                  edgecolors='black', linewidths=1.0)
+                  c='orange', alpha=0.9, s=200, zorder=2,
+                  edgecolors='black', linewidths=1.5)
                   
-        # Draw path from entrance to nearest vacant spot
-        # Entrance coordinates are defined below, but we use the values here
-        ent_x, ent_y = 225, 50
-        path_x = [ent_x, nearest_spot['x'].values[0]]
-        path_y = [ent_y, nearest_spot['plot_y'].values[0]]
-        
-        ax.plot(path_x, path_y, color='yellow', linestyle='-', linewidth=2.5, zorder=1.5, alpha=0.9)
+    # Plot entering vehicle marker (static at top-left entrance)
+    entrance_x, entrance_y = 225, 50
+    ax.scatter(entrance_x, entrance_y, c='cyan', alpha=1.0, s=250, 
+              zorder=3, edgecolors='black', linewidths=2.0)
     
+    # Calculate and draw street-like path to nearest vacant spot
+    if not vacant_spots.empty:
+        # Get target coordinates
+        target_x = nearest_spot['x'].values[0]
+        target_y = nearest_spot['plot_y'].values[0]
+        
+        # Define aisles and routing based on slot clusters
+        # Layout hypothesis based on user feedback:
+        # Structure 1 (Left): Slots approx 420 and 600
+        # Structure 2 (Right): Slots approx 973 and 1157
+        #
+        # Roads:
+        # - Road 1 (Leftmost): Aligned with entrance at ~225. Serves X=420.
+        # - Road 2 (Middle): ~790. Serves X=600 and X=973.
+        # - Road 3 (Rightmost): ~1250. Serves X=1157.
+        
+        target_x_val = target_x
+        
+        if target_x_val < 500:
+            # Case 1: Left Structure, Left Side (X=420)
+            # Rule: Path comes strictly downwards from entrance, then turn.
+            # Aisle is the entrance column itself (225).
+            
+            # Waypoints:
+            # 1. Start at entrance (225, 50)
+            # 2. Move VERTICALLY down to target row (225, target_y)
+            # 3. Move HORIZONTALLY to target spot (420, target_y)
+            path_points_x = [entrance_x, entrance_x, target_x_val]
+            path_points_y = [entrance_y, target_y, target_y]
+            
+        else:
+            # All other cases involve moving horizontally to a different aisle first
+            if target_x_val < 800:     # Slot at 600 (Left Struct, Right Side)
+                aisle_x = 790          # Use Middle Road
+            elif target_x_val < 1050:  # Slot at 973 (Right Struct, Left Side)
+                aisle_x = 790          # Use Middle Road
+            else:                      # Slot at 1157 (Right Struct, Right Side)
+                aisle_x = 1250         # Use Right Road
+            
+            # Waypoints:
+            # 1. Start at entrance (225, 50)
+            # 2. Move VERTICALLY down (Forward) to cross-road level (225, 160)
+            #    (User requested "go forward first then make the left turn")
+            # 3. Move HORIZONTALLY to designated aisle (aisle_x, 160)
+            # 4. Move VERTICALLY down aisle (aisle_x, target_y)
+            # 5. Move HORIZONTALLY to target spot
+            cross_road_y = 160
+            path_points_x = [entrance_x, entrance_x, aisle_x, aisle_x, target_x_val]
+            path_points_y = [entrance_y, cross_road_y, cross_road_y, target_y, target_y]
+        
+        ax.plot(path_points_x, path_points_y, color='yellow', linestyle='-', 
+               linewidth=4.0, zorder=1.5, alpha=0.9)
+
     # Plot occupied spots with license plate images
     for idx, row in occupied_spots.iterrows():
         plate_number = row['plate_number']
@@ -175,12 +225,6 @@ def animate_frame(frame_num):
             # If no plate number, use red dot as fallback
             ax.scatter(row['x'], row['plot_y'], c='red', alpha=0.7, s=80, 
                       zorder=1, edgecolors='black', linewidths=0.5)
-    
-    # Plot entering vehicle marker (static at top-left entrance)
-    # Coordinates updated based on user feedback (blue dot, more to the right)
-    entrance_x, entrance_y = 225, 50
-    ax.scatter(entrance_x, entrance_y, c='cyan', alpha=1.0, s=150, 
-              zorder=3, edgecolors='black', linewidths=1.5)
     
     return []
 
